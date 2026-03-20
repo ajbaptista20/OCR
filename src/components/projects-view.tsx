@@ -60,62 +60,71 @@ export function ProjectsView({
 
   return (
     <div className="space-y-4">
-      {isAdmin && (
-        <div>
-          {!showForm ? (
+      <div className="flex items-center justify-between">
+        {!showForm ? (
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn-primary text-sm"
+            disabled={!isAdmin}
+            title={!isAdmin ? 'Apenas administradores podem criar projetos' : ''}
+          >
+            <Plus size={16} />
+            Novo Projeto
+          </button>
+        ) : (
+          <span className="text-sm text-gray-500">Novo projeto</span>
+        )}
+        {!isAdmin && (
+          <p className="text-xs text-gray-500">
+            Apenas administradores podem criar projetos.
+          </p>
+        )}
+      </div>
+
+      {showForm && isAdmin && (
+        <form onSubmit={handleCreate} className="card p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="label">Código</label>
+              <input
+                type="text"
+                className="input"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Ex: OBR-001"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Nome</label>
+              <input
+                type="text"
+                className="input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nome do projeto"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
             <button
-              onClick={() => setShowForm(true)}
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="btn-secondary text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
               className="btn-primary text-sm"
             >
-              <Plus size={16} />
-              Novo Projeto
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              Criar Projeto
             </button>
-          ) : (
-            <form onSubmit={handleCreate} className="card p-4 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Código</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="Ex: OBR-001"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label">Nome</label>
-                  <input
-                    type="text"
-                    className="input"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Nome do projeto"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="btn-secondary text-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn-primary text-sm"
-                >
-                  {saving && <Loader2 size={14} className="animate-spin" />}
-                  Criar Projeto
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+          </div>
+        </form>
       )}
 
       {projects.length === 0 ? (
