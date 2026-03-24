@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const publicRoutes = ['/login', '/api/docupipe/webhook'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
