@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const { data: invoice, error: fetchError } = await supabase
       .from('invoices')
-      .select('id')
+      .select('id, docupipe_job_id')
       .eq('docupipe_id', document_id)
       .single();
 
@@ -39,6 +39,13 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    console.log('DocuPipe webhook matched invoice', {
+      invoice_id: invoice.id,
+      document_id,
+      job_id: invoice.docupipe_job_id,
+      status,
+    });
 
     if (status === 'failed') {
       const { error: failUpdateError } = await supabase

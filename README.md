@@ -60,6 +60,7 @@ Notas:
 - Em produção, configure `NEXT_PUBLIC_SITE_URL` ou `DOCUPIPE_WEBHOOK_URL` para evitar callbacks para `localhost`.
 - `SUPABASE_SERVICE_ROLE_KEY` não pode ser chave `anon`/`publishable`.
 - Com a API atual do DocuPipe, use endpoint `/document` com header `X-API-Key`.
+- Se o webhook não disparar, o sistema faz reconciliação por polling quando abrir o detalhe da fatura para evitar ficar indefinidamente em `processing`.
 
 ### 3. Configurar base de dados
 

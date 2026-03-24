@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { reconcileInvoiceOcr } from '@/lib/docupipe-reconcile';
 import { notFound } from 'next/navigation';
 import { InvoiceDetail } from '@/components/invoice-detail';
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -30,6 +31,25 @@ export default async function InvoiceDetailPage({
     .single();
 
   if (error || !invoice) notFound();
+
+  if (invoice.status === 'processing') {
+    try {
+      const reconciliation = await reconcileInvoiceOcr(invoice.id);
+      if (reconciliation.reconciled) {
+        const { data: refreshedInvoice } = await supabase
+          .from('invoices')
+          .select('*, invoice_lines(*), project:projects(*)')
+          .eq('id', id)
+          .single();
+
+        if (refreshedInvoice) {
+          Object.assign(invoice, refreshedInvoice);
+        }
+      }
+    } catch (reconcileError) {
+      console.error('Invoice OCR reconcile failed on detail page:', reconcileError);
+    }
+  }
 
   const { data: projects } = await supabase
     .from('projects')

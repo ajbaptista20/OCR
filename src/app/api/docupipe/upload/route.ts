@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
         invoice_id: invoiceId,
       });
       const docuPipeId = result.documentId;
+      const docuPipeJobId = result.jobId || null;
 
       const { error: docuIdError } = await supabase
         .from('invoices')
-        .update({ docupipe_id: docuPipeId })
+        .update({ docupipe_id: docuPipeId, docupipe_job_id: docuPipeJobId })
         .eq('id', invoiceId);
 
       if (docuIdError) {
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         documentId: docuPipeId,
+        jobId: docuPipeJobId,
       });
     } catch (docuError) {
       console.error('DocuPipe upload failed:', docuError);

@@ -132,10 +132,10 @@ export function UploadForm() {
         console.warn('DocuPipe upload failed, invoice saved without OCR');
       }
 
-      if (ocrWarning) {
-        toast(ocrWarning);
+      if (!ocrWarning) {
+        toast('OCR iniciado. A extração pode demorar alguns minutos.');
       } else {
-        toast.success('Fatura carregada com sucesso!');
+        toast(ocrWarning);
       }
       router.push('/invoices');
       router.refresh();
