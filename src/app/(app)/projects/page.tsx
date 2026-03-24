@@ -24,7 +24,7 @@ export default async function ProjectsPage() {
       <h1 className="text-xl font-bold text-gray-900 mb-6">Projetos</h1>
       <ProjectsView
         projects={projects || []}
-        isAdmin={profile?.role === 'admin'}
+        isAdmin={['admin', 'manager'].includes(profile?.role || '')}
       />
     </div>
   );

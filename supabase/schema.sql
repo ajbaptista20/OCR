@@ -6,6 +6,18 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
+-- User role enum (dropdown in Supabase table editor)
+do $$
+begin
+  if not exists (
+    select 1 from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'user_role' and n.nspname = 'public'
+  ) then
+    create type public.user_role as enum ('admin', 'accounting', 'manager');
+  end if;
+end $$;
+
 -- ============================================
 -- PROFILES (linked to auth.users)
 -- ============================================
@@ -13,11 +25,46 @@ create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text not null,
   full_name text,
-  role text not null default 'manager' check (role in ('admin', 'accounting', 'manager')),
+  role public.user_role not null default 'manager',
   created_at timestamptz default now()
 );
 
 alter table public.profiles enable row level security;
+
+-- Role helper functions (security definer to avoid RLS recursion)
+create or replace function public.is_admin_or_manager()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role in ('admin'::public.user_role, 'manager'::public.user_role)
+  );
+$$;
+
+create or replace function public.is_admin_manager_or_accounting()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role in (
+        'admin'::public.user_role,
+        'manager'::public.user_role,
+        'accounting'::public.user_role
+      )
+  );
+$$;
 
 create policy "Users can view own profile"
   on public.profiles for select
@@ -25,31 +72,22 @@ create policy "Users can view own profile"
 
 create policy "Admins can view all profiles"
   on public.profiles for select
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
+  using (public.is_admin_or_manager());
 
 create policy "Admins can update profiles"
   on public.profiles for update
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
+  using (public.is_admin_or_manager());
 
 -- Auto-create profile on signup
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, full_name)
+  insert into public.profiles (id, email, full_name, role)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', '')
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    'admin'
   );
   return new;
 end;
@@ -77,30 +115,15 @@ create policy "Authenticated users can view projects"
 
 create policy "Admins can insert projects"
   on public.projects for insert
-  with check (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
+  with check (public.is_admin_or_manager());
 
 create policy "Admins can update projects"
   on public.projects for update
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
+  using (public.is_admin_or_manager());
 
 create policy "Admins can delete projects"
   on public.projects for delete
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
+  using (public.is_admin_or_manager());
 
 -- ============================================
 -- INVOICES
@@ -133,12 +156,7 @@ alter table public.invoices enable row level security;
 
 create policy "Admins and accounting can view all invoices"
   on public.invoices for select
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role in ('admin', 'accounting')
-    )
-  );
+  using (public.is_admin_manager_or_accounting());
 
 create policy "Managers can view own invoices"
   on public.invoices for select
@@ -157,12 +175,7 @@ create policy "Users can update invoices they uploaded (pre-approval)"
 
 create policy "Admins can update any invoice"
   on public.invoices for update
-  using (
-    exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role = 'admin'
-    )
-  );
+  using (public.is_admin_or_manager());
 
 create policy "Accounting can update invoices for approval"
   on public.invoices for update
@@ -210,10 +223,7 @@ create policy "Users can view invoice lines for accessible invoices"
       where i.id = invoice_id
       and (
         i.uploaded_by = auth.uid()
-        or exists (
-          select 1 from public.profiles
-          where id = auth.uid() and role in ('admin', 'accounting')
-        )
+        or public.is_admin_manager_or_accounting()
       )
     )
   );
@@ -230,10 +240,7 @@ create policy "Users can update invoice lines for their invoices"
       where i.id = invoice_id
       and (
         i.uploaded_by = auth.uid()
-        or exists (
-          select 1 from public.profiles
-          where id = auth.uid() and role in ('admin', 'accounting')
-        )
+        or public.is_admin_manager_or_accounting()
       )
     )
   );
@@ -246,10 +253,7 @@ create policy "Users can delete invoice lines for their invoices"
       where i.id = invoice_id
       and (
         i.uploaded_by = auth.uid()
-        or exists (
-          select 1 from public.profiles
-          where id = auth.uid() and role in ('admin', 'accounting')
-        )
+        or public.is_admin_manager_or_accounting()
       )
     )
   );

@@ -49,7 +49,7 @@ export function InvoiceDetail({ invoice: initial, projects, profile }: Props) {
     canEdit && invoice.project_id && invoice.supplier_name && invoice.invoice_number;
   const canApprove =
     invoice.status === 'pending_approval' &&
-    ['admin', 'accounting'].includes(profile.role);
+    ['admin', 'manager', 'accounting'].includes(profile.role);
 
   useEffect(() => {
     if (invoice.file_path) {

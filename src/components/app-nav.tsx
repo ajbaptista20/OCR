@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FileText,
   FolderKanban,
+  Users,
   LogOut,
   Building2,
   Upload,
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/invoices', label: 'Faturas', icon: FileText },
   { href: '/projects', label: 'Projetos', icon: FolderKanban },
+  { href: '/users', label: 'Utilizadores', icon: Users, adminOnly: true },
 ];
 
 export function AppNav({
@@ -42,6 +44,9 @@ export function AppNav({
     accounting: 'Contabilidade',
     manager: 'Gestor',
   };
+  const visibleNavItems = navItems.filter(
+    (item) => !item.adminOnly || ['admin', 'manager'].includes(userRole)
+  );
 
   return (
     <>
@@ -56,7 +61,7 @@ export function AppNav({
           </Link>
 
           <nav className="flex items-center gap-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const active = pathname.startsWith(item.href);
               return (
                 <Link
@@ -127,7 +132,7 @@ export function AppNav({
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
         <div className="flex items-center justify-around py-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link

@@ -1,4 +1,10 @@
 export type UserRole = 'admin' | 'accounting' | 'manager';
+export const USER_ROLES: UserRole[] = ['admin', 'accounting', 'manager'];
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  admin: 'Admin',
+  accounting: 'Contabilidade',
+  manager: 'Gestor',
+};
 
 export type InvoiceStatus =
   | 'uploaded'
