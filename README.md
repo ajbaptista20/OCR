@@ -63,6 +63,8 @@ Notas:
 - Com a API atual do DocuPipe, use endpoint `/document` com header `X-API-Key`.
 - Configure um workflow ativo no DocuPipe e preencha `DOCUPIPE_WORKFLOW_ID` para que a extração e webhook sejam disparados.
 - Registe o endpoint `https://seu-dominio/api/docupipe/webhook` no painel DocuPipe e associe-o aos eventos de conclusão do workflow/documento.
+- No DocuPipe, use header **`Authorization`** com valor **`Bearer <DOCUPIPE_WEBHOOK_SECRET>`** (não use um header com nome `Bearer`).
+- Se `POST /api/docupipe/upload` devolver erro ao gravar referência, execute no Supabase: `alter table public.invoices add column if not exists docupipe_job_id text;`
 
 ### 3. Configurar base de dados
 

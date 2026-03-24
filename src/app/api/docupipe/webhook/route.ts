@@ -8,6 +8,7 @@ type WebhookLineItem = {
   unit_price?: number;
   total?: number;
   unitPrice?: number;
+  lineTotal?: number;
 };
 
 type NormalizedWebhookPayload = {
@@ -33,16 +34,43 @@ type NormalizedWebhookPayload = {
 function normalizeWebhookPayload(rawPayload: unknown): NormalizedWebhookPayload {
   const payload = (rawPayload || {}) as Record<string, unknown>;
 
+  const documentNested = payload.document as Record<string, unknown> | undefined;
+
   const documentId =
     (payload.document_id as string | undefined) ||
     (payload.documentId as string | undefined) ||
-    (payload.documentID as string | undefined);
+    (payload.documentID as string | undefined) ||
+    (documentNested?.id as string | undefined) ||
+    (documentNested?.documentId as string | undefined);
 
-  const status =
+  let status =
     (payload.status as string | undefined) ||
     (payload.processingStatus as string | undefined) ||
     (payload.documentStatus as string | undefined) ||
     '';
+
+  const eventType = String(
+    (payload.type as string | undefined) ||
+      (payload.event as string | undefined) ||
+      (payload.eventType as string | undefined) ||
+      ''
+  ).toLowerCase();
+
+  if (!status.trim()) {
+    if (
+      eventType.endsWith('.success') ||
+      eventType.includes('processed.success') ||
+      eventType.includes('standardization') && eventType.includes('success')
+    ) {
+      status = 'completed';
+    } else if (
+      eventType.endsWith('.failed') ||
+      eventType.includes('.error') ||
+      (eventType.includes('failed') && !eventType.includes('success'))
+    ) {
+      status = 'failed';
+    }
+  }
 
   const rawData =
     (payload.data as Record<string, unknown> | undefined) ||
@@ -80,7 +108,7 @@ function normalizeWebhookPayload(rawPayload: unknown): NormalizedWebhookPayload 
             description: item.description,
             quantity: item.quantity,
             unit_price: item.unit_price ?? item.unitPrice,
-            total: item.total,
+            total: item.total ?? item.lineTotal,
           })),
         }
       : undefined,
@@ -152,7 +180,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (status !== 'completed') {
-      console.error('Unsupported DocuPipe webhook status:', status);
+      console.error('Unsupported DocuPipe webhook status:', {
+        status,
+        eventType:
+          (rawPayload as Record<string, unknown>).type ||
+          (rawPayload as Record<string, unknown>).event,
+      });
       return NextResponse.json(
         { error: 'Status de webhook inválido' },
         { status: 400 }
