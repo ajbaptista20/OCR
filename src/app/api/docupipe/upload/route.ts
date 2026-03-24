@@ -39,10 +39,11 @@ export async function POST(request: NextRequest) {
       const result = await uploadToDocuPipe(base64File, fileName, {
         invoice_id: invoiceId,
       });
+      const docuPipeId = result.documentId;
 
       const { error: docuIdError } = await supabase
         .from('invoices')
-        .update({ docupipe_id: result.document_id })
+        .update({ docupipe_id: docuPipeId })
         .eq('id', invoiceId);
 
       if (docuIdError) {
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        documentId: result.document_id,
+        documentId: docuPipeId,
       });
     } catch (docuError) {
       console.error('DocuPipe upload failed:', docuError);

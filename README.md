@@ -51,7 +51,7 @@ Preencha o ficheiro `.env.local` com os valores do seu projeto Supabase:
 | `SUPABASE_SERVICE_ROLE_KEY` | Chave service_role secreta do Supabase (para webhooks) |
 | `NEXT_PUBLIC_SITE_URL` | URL pública da app (ex: `https://ocr-ynrd.vercel.app`) |
 | `DOCUPIPE_API_KEY` | Chave API do DocuPipe |
-| `DOCUPIPE_API_URL` | URL base da API DocuPipe |
+| `DOCUPIPE_API_URL` | URL base da API DocuPipe (ex: `https://app.docupipe.ai`) |
 | `DOCUPIPE_WEBHOOK_SECRET` | Secret para validar webhooks |
 | `DOCUPIPE_WEBHOOK_URL` | URL completa do webhook (opcional, tem prioridade) |
 | `NEXT_PUBLIC_INVOICES_BUCKET` | Nome do bucket de faturas (opcional, default: `invoices`) |
@@ -59,6 +59,7 @@ Preencha o ficheiro `.env.local` com os valores do seu projeto Supabase:
 Notas:
 - Em produção, configure `NEXT_PUBLIC_SITE_URL` ou `DOCUPIPE_WEBHOOK_URL` para evitar callbacks para `localhost`.
 - `SUPABASE_SERVICE_ROLE_KEY` não pode ser chave `anon`/`publishable`.
+- Com a API atual do DocuPipe, use endpoint `/document` com header `X-API-Key`.
 
 ### 3. Configurar base de dados
 

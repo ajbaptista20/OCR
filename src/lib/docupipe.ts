@@ -1,4 +1,4 @@
-const DOCUPIPE_API_URL = process.env.DOCUPIPE_API_URL || 'https://api.docupipe.com';
+const DOCUPIPE_API_URL = process.env.DOCUPIPE_API_URL || 'https://app.docupipe.ai';
 const DOCUPIPE_API_KEY = process.env.DOCUPIPE_API_KEY || '';
 
 function getDocuPipeWebhookUrl() {
@@ -24,7 +24,8 @@ function getDocuPipeWebhookUrl() {
 }
 
 interface DocuPipeUploadResponse {
-  document_id: string;
+  documentId: string;
+  jobId?: string;
   status: string;
 }
 
@@ -33,16 +34,22 @@ export async function uploadToDocuPipe(
   fileName: string,
   metadata?: Record<string, string>
 ): Promise<DocuPipeUploadResponse> {
-  const response = await fetch(`${DOCUPIPE_API_URL}/v1/documents`, {
+  const response = await fetch(`${DOCUPIPE_API_URL}/document`, {
     method: 'POST',
     headers: {
+      Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${DOCUPIPE_API_KEY}`,
+      'X-API-Key': DOCUPIPE_API_KEY,
     },
     body: JSON.stringify({
-      file: base64File,
-      file_name: fileName,
+      document: {
+        file: {
+          contents: base64File,
+          filename: fileName,
+        },
+      },
       metadata: metadata || {},
+      // Kept for backwards compatibility with setups that accept callback hints
       webhook_url: getDocuPipeWebhookUrl(),
     }),
   });
