@@ -2,6 +2,91 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { DocuPipeWebhookPayload } from '@/lib/docupipe';
 
+type WebhookLineItem = {
+  description?: string;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+  unitPrice?: number;
+};
+
+type NormalizedWebhookPayload = {
+  document_id: string;
+  status: string;
+  error?: string;
+  data?: {
+    supplier_name?: string;
+    invoice_number?: string;
+    invoice_date?: string;
+    total_amount?: number;
+    vat_amount?: number;
+    currency?: string;
+    line_items?: Array<{
+      description?: string;
+      quantity?: number;
+      unit_price?: number;
+      total?: number;
+    }>;
+  };
+};
+
+function normalizeWebhookPayload(rawPayload: unknown): NormalizedWebhookPayload {
+  const payload = (rawPayload || {}) as Record<string, unknown>;
+
+  const documentId =
+    (payload.document_id as string | undefined) ||
+    (payload.documentId as string | undefined) ||
+    (payload.documentID as string | undefined);
+
+  const status =
+    (payload.status as string | undefined) ||
+    (payload.processingStatus as string | undefined) ||
+    (payload.documentStatus as string | undefined) ||
+    '';
+
+  const rawData =
+    (payload.data as Record<string, unknown> | undefined) ||
+    (payload.result as Record<string, unknown> | undefined) ||
+    (payload.output as Record<string, unknown> | undefined);
+
+  const rawLineItems =
+    (rawData?.line_items as WebhookLineItem[] | undefined) ||
+    (rawData?.lineItems as WebhookLineItem[] | undefined) ||
+    [];
+
+  return {
+    document_id: documentId || '',
+    status,
+    error: payload.error as string | undefined,
+    data: rawData
+      ? {
+          supplier_name:
+            (rawData.supplier_name as string | undefined) ||
+            (rawData.supplierName as string | undefined),
+          invoice_number:
+            (rawData.invoice_number as string | undefined) ||
+            (rawData.invoiceNumber as string | undefined),
+          invoice_date:
+            (rawData.invoice_date as string | undefined) ||
+            (rawData.invoiceDate as string | undefined),
+          total_amount:
+            (rawData.total_amount as number | undefined) ??
+            (rawData.totalAmount as number | undefined),
+          vat_amount:
+            (rawData.vat_amount as number | undefined) ??
+            (rawData.vatAmount as number | undefined),
+          currency: rawData.currency as string | undefined,
+          line_items: rawLineItems.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price ?? item.unitPrice,
+            total: item.total,
+          })),
+        }
+      : undefined,
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const webhookSecret = process.env.DOCUPIPE_WEBHOOK_SECRET;
@@ -13,7 +98,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const payload: DocuPipeWebhookPayload = await request.json();
+    const rawPayload = (await request.json()) as DocuPipeWebhookPayload;
+    const payload = normalizeWebhookPayload(rawPayload);
     const { document_id, status, data, error } = payload;
     console.log('DocuPipe webhook received', { document_id, status });
 

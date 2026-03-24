@@ -41,6 +41,11 @@ export async function POST(request: NextRequest) {
       });
       const docuPipeId = result.documentId;
       const docuPipeJobId = result.jobId || null;
+      console.log('DocuPipe document submitted', {
+        invoiceId,
+        documentId: docuPipeId,
+        jobId: docuPipeJobId,
+      });
 
       const { error: docuIdError } = await supabase
         .from('invoices')

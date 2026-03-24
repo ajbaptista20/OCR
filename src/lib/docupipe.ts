@@ -1,5 +1,6 @@
 const DOCUPIPE_API_URL = process.env.DOCUPIPE_API_URL || 'https://app.docupipe.ai';
 const DOCUPIPE_API_KEY = process.env.DOCUPIPE_API_KEY || '';
+const DOCUPIPE_WORKFLOW_ID = process.env.DOCUPIPE_WORKFLOW_ID || '';
 
 function getDocuPipeWebhookUrl() {
   if (process.env.DOCUPIPE_WEBHOOK_URL) {
@@ -55,6 +56,7 @@ export async function uploadToDocuPipe(
         },
       },
       metadata: metadata || {},
+      ...(DOCUPIPE_WORKFLOW_ID ? { workflowId: DOCUPIPE_WORKFLOW_ID } : {}),
       // Kept for backwards compatibility with setups that accept callback hints
       webhook_url: getDocuPipeWebhookUrl(),
     }),
