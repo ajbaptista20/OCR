@@ -53,12 +53,23 @@ export function InvoiceDetail({ invoice: initial, projects, profile }: Props) {
     ['admin', 'manager', 'accounting'].includes(profile.role);
 
   useEffect(() => {
-    if (invoice.file_path) {
-      const { data } = supabase.storage
+    async function loadFileUrl() {
+      if (!invoice.file_path) return;
+
+      const { data, error } = await supabase.storage
         .from(INVOICES_BUCKET)
-        .getPublicUrl(invoice.file_path);
-      setFileUrl(data.publicUrl);
+        .createSignedUrl(invoice.file_path, 60 * 60);
+
+      if (error) {
+        console.error('Failed to create signed invoice URL:', error);
+        setFileUrl(null);
+        return;
+      }
+
+      setFileUrl(data.signedUrl);
     }
+
+    void loadFileUrl();
   }, [invoice.file_path, supabase.storage]);
 
   useEffect(() => {
