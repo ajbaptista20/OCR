@@ -5,6 +5,7 @@ import { Camera, FileUp, X, Loader2, Eye } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { createClient } from '@/lib/supabase/client';
 import { fileToBase64 } from '@/lib/utils';
+import { INVOICES_BUCKET } from '@/lib/storage';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -76,10 +77,17 @@ export function UploadForm() {
       const filePath = `${user.id}/${Date.now()}.${ext}`;
 
       const { error: storageError } = await supabase.storage
-        .from('invoices')
+        .from(INVOICES_BUCKET)
         .upload(filePath, file);
 
-      if (storageError) throw storageError;
+      if (storageError) {
+        if (storageError.message?.toLowerCase().includes('bucket not found')) {
+          throw new Error(
+            `Bucket "${INVOICES_BUCKET}" não encontrado no Supabase Storage. Crie o bucket ou ajuste NEXT_PUBLIC_INVOICES_BUCKET.`
+          );
+        }
+        throw storageError;
+      }
 
       const { data: invoice, error: dbError } = await supabase
         .from('invoices')

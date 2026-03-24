@@ -52,6 +52,7 @@ Preencha o ficheiro `.env.local` com os valores do seu projeto Supabase:
 | `DOCUPIPE_API_KEY` | Chave API do DocuPipe |
 | `DOCUPIPE_API_URL` | URL base da API DocuPipe |
 | `DOCUPIPE_WEBHOOK_SECRET` | Secret para validar webhooks |
+| `NEXT_PUBLIC_INVOICES_BUCKET` | Nome do bucket de faturas (opcional, default: `invoices`) |
 
 ### 3. Configurar base de dados
 
@@ -67,6 +68,7 @@ No dashboard do Supabase:
 3. Adicione políticas de acesso:
    - **INSERT**: Utilizadores autenticados podem fazer upload
    - **SELECT**: Utilizadores autenticados podem ver ficheiros
+4. Se aparecer o erro **"Bucket not found"**, confirme que o nome do bucket corresponde ao valor de `NEXT_PUBLIC_INVOICES_BUCKET` (ou `invoices` por defeito)
 
 ### 5. Criar primeiro utilizador admin
 

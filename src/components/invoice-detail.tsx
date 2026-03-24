@@ -12,6 +12,7 @@ import {
 } from '@/lib/types';
 import { StatusBadge } from '@/components/status-badge';
 import { formatCurrency } from '@/lib/utils';
+import { INVOICES_BUCKET } from '@/lib/storage';
 import {
   Save,
   Send,
@@ -54,7 +55,7 @@ export function InvoiceDetail({ invoice: initial, projects, profile }: Props) {
   useEffect(() => {
     if (invoice.file_path) {
       const { data } = supabase.storage
-        .from('invoices')
+        .from(INVOICES_BUCKET)
         .getPublicUrl(invoice.file_path);
       setFileUrl(data.publicUrl);
     }

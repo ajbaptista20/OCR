@@ -261,17 +261,39 @@ create policy "Users can delete invoice lines for their invoices"
 -- ============================================
 -- STORAGE BUCKET
 -- ============================================
--- Run this separately or create via Supabase Dashboard:
--- insert into storage.buckets (id, name, public) values ('invoices', 'invoices', false);
+insert into storage.buckets (id, name, public)
+values ('invoices', 'invoices', false)
+on conflict (id) do nothing;
 
--- Storage policies
--- create policy "Authenticated users can upload invoices"
---   on storage.objects for insert
---   with check (bucket_id = 'invoices' and auth.role() = 'authenticated');
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Authenticated users can upload invoices'
+  ) then
+    create policy "Authenticated users can upload invoices"
+      on storage.objects for insert
+      with check (bucket_id = 'invoices' and auth.role() = 'authenticated');
+  end if;
+end $$;
 
--- create policy "Users can view invoice files"
---   on storage.objects for select
---   using (bucket_id = 'invoices' and auth.role() = 'authenticated');
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'storage'
+      and tablename = 'objects'
+      and policyname = 'Users can view invoice files'
+  ) then
+    create policy "Users can view invoice files"
+      on storage.objects for select
+      using (bucket_id = 'invoices' and auth.role() = 'authenticated');
+  end if;
+end $$;
 
 -- ============================================
 -- INDEXES
