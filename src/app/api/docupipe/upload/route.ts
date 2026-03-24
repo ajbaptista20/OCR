@@ -28,7 +28,11 @@ export async function POST(request: NextRequest) {
       .eq('id', invoiceId);
 
     if (updateError) {
-      console.error('Failed to update invoice status:', updateError);
+      console.error('Failed to set invoice as processing:', updateError);
+      return NextResponse.json(
+        { error: 'Erro ao iniciar processamento OCR' },
+        { status: 500 }
+      );
     }
 
     try {
@@ -36,10 +40,27 @@ export async function POST(request: NextRequest) {
         invoice_id: invoiceId,
       });
 
-      await supabase
+      const { error: docuIdError } = await supabase
         .from('invoices')
         .update({ docupipe_id: result.document_id })
         .eq('id', invoiceId);
+
+      if (docuIdError) {
+        console.error('Failed to persist docupipe_id:', docuIdError);
+        await supabase
+          .from('invoices')
+          .update({ status: 'pending_review' })
+          .eq('id', invoiceId);
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              'OCR iniciado, mas não foi possível guardar a referência. Fatura enviada para revisão manual.',
+          },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json({
         success: true,
@@ -58,7 +79,7 @@ export async function POST(request: NextRequest) {
           success: false,
           message: 'OCR falhou — a fatura pode ser editada manualmente',
         },
-        { status: 200 }
+        { status: 502 }
       );
     }
   } catch (err) {

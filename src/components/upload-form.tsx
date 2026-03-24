@@ -103,8 +103,9 @@ export function UploadForm() {
       if (dbError) throw dbError;
 
       const base64 = await fileToBase64(file);
+      let ocrWarning: string | null = null;
       try {
-        await fetch('/api/docupipe/upload', {
+        const ocrResponse = await fetch('/api/docupipe/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -113,12 +114,29 @@ export function UploadForm() {
             fileName: file.name,
           }),
         });
+
+        const ocrBody = (await ocrResponse.json().catch(() => null)) as
+          | { message?: string; error?: string; success?: boolean }
+          | null;
+
+        if (!ocrResponse.ok || ocrBody?.success === false) {
+          ocrWarning =
+            ocrBody?.message ||
+            ocrBody?.error ||
+            'OCR indisponível no momento. A fatura foi guardada para revisão manual.';
+        }
       } catch {
         // OCR is non-blocking — invoice still saved
+        ocrWarning =
+          'OCR indisponível no momento. A fatura foi guardada para revisão manual.';
         console.warn('DocuPipe upload failed, invoice saved without OCR');
       }
 
-      toast.success('Fatura carregada com sucesso!');
+      if (ocrWarning) {
+        toast(ocrWarning);
+      } else {
+        toast.success('Fatura carregada com sucesso!');
+      }
       router.push('/invoices');
       router.refresh();
     } catch (err: unknown) {

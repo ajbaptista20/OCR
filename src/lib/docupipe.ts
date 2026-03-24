@@ -1,6 +1,28 @@
 const DOCUPIPE_API_URL = process.env.DOCUPIPE_API_URL || 'https://api.docupipe.com';
 const DOCUPIPE_API_KEY = process.env.DOCUPIPE_API_KEY || '';
 
+function getDocuPipeWebhookUrl() {
+  if (process.env.DOCUPIPE_WEBHOOK_URL) {
+    return process.env.DOCUPIPE_WEBHOOK_URL;
+  }
+
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return `${process.env.NEXT_PUBLIC_SITE_URL}/api/docupipe/webhook`;
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}/api/docupipe/webhook`;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Missing DOCUPIPE_WEBHOOK_URL or NEXT_PUBLIC_SITE_URL in production.'
+    );
+  }
+
+  return 'http://localhost:3000/api/docupipe/webhook';
+}
+
 interface DocuPipeUploadResponse {
   document_id: string;
   status: string;
@@ -21,7 +43,7 @@ export async function uploadToDocuPipe(
       file: base64File,
       file_name: fileName,
       metadata: metadata || {},
-      webhook_url: `${process.env.NEXT_PUBLIC_SUPABASE_URL ? '' : ''}${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/api/docupipe/webhook`,
+      webhook_url: getDocuPipeWebhookUrl(),
     }),
   });
 
@@ -35,7 +57,7 @@ export async function uploadToDocuPipe(
 
 export interface DocuPipeWebhookPayload {
   document_id: string;
-  status: 'completed' | 'failed';
+  status: 'completed' | 'failed' | string;
   data?: {
     supplier_name?: string;
     invoice_number?: string;

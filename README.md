@@ -48,11 +48,17 @@ Preencha o ficheiro `.env.local` com os valores do seu projeto Supabase:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave anónima (anon key) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave de serviço (para webhooks) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave service_role secreta do Supabase (para webhooks) |
+| `NEXT_PUBLIC_SITE_URL` | URL pública da app (ex: `https://ocr-ynrd.vercel.app`) |
 | `DOCUPIPE_API_KEY` | Chave API do DocuPipe |
 | `DOCUPIPE_API_URL` | URL base da API DocuPipe |
 | `DOCUPIPE_WEBHOOK_SECRET` | Secret para validar webhooks |
+| `DOCUPIPE_WEBHOOK_URL` | URL completa do webhook (opcional, tem prioridade) |
 | `NEXT_PUBLIC_INVOICES_BUCKET` | Nome do bucket de faturas (opcional, default: `invoices`) |
+
+Notas:
+- Em produção, configure `NEXT_PUBLIC_SITE_URL` ou `DOCUPIPE_WEBHOOK_URL` para evitar callbacks para `localhost`.
+- `SUPABASE_SERVICE_ROLE_KEY` não pode ser chave `anon`/`publishable`.
 
 ### 3. Configurar base de dados
 
