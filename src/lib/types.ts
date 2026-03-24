@@ -43,6 +43,7 @@ export interface Invoice {
   cost_type: CostType | null;
   status: InvoiceStatus;
   docupipe_id: string | null;
+  docupipe_job_id: string | null;
   file_path: string | null;
   file_name: string | null;
   uploaded_by: string | null;

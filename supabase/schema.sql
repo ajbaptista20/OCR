@@ -142,6 +142,7 @@ create table public.invoices (
     status in ('uploaded', 'processing', 'pending_review', 'pending_approval', 'approved', 'rejected')
   ),
   docupipe_id text,
+  docupipe_job_id text,
   file_path text,
   file_name text,
   uploaded_by uuid references auth.users(id),

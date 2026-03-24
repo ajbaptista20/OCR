@@ -29,6 +29,12 @@ interface DocuPipeUploadResponse {
   status: string;
 }
 
+interface DocuPipeDocumentStatusResponse {
+  status?: string;
+  processingStatus?: string;
+  documentStatus?: string;
+}
+
 export async function uploadToDocuPipe(
   base64File: string,
   fileName: string,
@@ -60,6 +66,31 @@ export async function uploadToDocuPipe(
   }
 
   return response.json();
+}
+
+export async function getDocuPipeDocumentStatus(
+  documentId: string
+): Promise<string> {
+  const response = await fetch(`${DOCUPIPE_API_URL}/document/${documentId}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      'X-API-Key': DOCUPIPE_API_KEY,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`DocuPipe status fetch failed: ${error}`);
+  }
+
+  const payload = (await response.json()) as DocuPipeDocumentStatusResponse;
+  return (
+    payload.status ||
+    payload.processingStatus ||
+    payload.documentStatus ||
+    'processing'
+  );
 }
 
 export interface DocuPipeWebhookPayload {
