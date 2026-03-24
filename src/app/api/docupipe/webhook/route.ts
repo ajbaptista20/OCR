@@ -15,6 +15,9 @@ type NormalizedWebhookPayload = {
   document_id: string;
   status: string;
   error?: string;
+  /** From upload metadata — fallback when docupipe_id not yet in DB */
+  metadata_invoice_id?: string;
+  job_id?: string;
   data?: {
     supplier_name?: string;
     invoice_number?: string;
@@ -31,8 +34,29 @@ type NormalizedWebhookPayload = {
   };
 };
 
+function unwrapOuterEnvelope(
+  raw: Record<string, unknown>
+): Record<string, unknown> {
+  const candidates = ['payload', 'body', 'message', 'record', 'data'] as const;
+  for (const key of candidates) {
+    const inner = raw[key];
+    if (
+      inner &&
+      typeof inner === 'object' &&
+      !Array.isArray(inner) &&
+      ('documentId' in (inner as object) ||
+        'document_id' in (inner as object) ||
+        'eventType' in (inner as object))
+    ) {
+      return { ...(inner as Record<string, unknown>), ...raw };
+    }
+  }
+  return raw;
+}
+
 function normalizeWebhookPayload(rawPayload: unknown): NormalizedWebhookPayload {
-  const payload = (rawPayload || {}) as Record<string, unknown>;
+  const root = (rawPayload || {}) as Record<string, unknown>;
+  const payload = unwrapOuterEnvelope(root);
 
   const documentNested = payload.document as Record<string, unknown> | undefined;
 
@@ -55,6 +79,12 @@ function normalizeWebhookPayload(rawPayload: unknown): NormalizedWebhookPayload 
       (payload.eventType as string | undefined) ||
       ''
   ).toLowerCase();
+
+  const meta = payload.metadata as Record<string, unknown> | undefined;
+  const metadataInvoiceId =
+    (meta?.invoice_id as string | undefined) ||
+    (meta?.invoiceId as string | undefined);
+  const jobId = (payload.jobId as string | undefined) || undefined;
 
   if (!status.trim()) {
     if (
@@ -86,6 +116,8 @@ function normalizeWebhookPayload(rawPayload: unknown): NormalizedWebhookPayload 
     document_id: documentId || '',
     status,
     error: payload.error as string | undefined,
+    metadata_invoice_id: metadataInvoiceId,
+    job_id: jobId,
     data: rawData
       ? {
           supplier_name:
@@ -127,9 +159,17 @@ export async function POST(request: NextRequest) {
     }
 
     const rawPayload = (await request.json()) as DocuPipeWebhookPayload;
+    const raw = rawPayload as unknown as Record<string, unknown>;
     const payload = normalizeWebhookPayload(rawPayload);
-    const { document_id, status, data, error } = payload;
-    console.log('DocuPipe webhook received', { document_id, status });
+    const { document_id, status, data, error, metadata_invoice_id, job_id } =
+      payload;
+    const eventTypeRaw = raw.eventType || raw.type;
+    console.log('DocuPipe webhook received', {
+      document_id,
+      status,
+      eventType: eventTypeRaw,
+      metadata_invoice_id,
+    });
 
     if (!document_id) {
       return NextResponse.json(
@@ -140,14 +180,53 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServiceClient();
 
-    const { data: invoice, error: fetchError } = await supabase
+    let invoice: { id: string; docupipe_job_id: string | null } | null = null;
+
+    const { data: byDocu, error: byDocErr } = await supabase
       .from('invoices')
       .select('id, docupipe_job_id')
       .eq('docupipe_id', document_id)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !invoice) {
-      console.error('Invoice not found for docupipe_id:', document_id);
+    if (!byDocErr && byDocu) {
+      invoice = byDocu;
+    }
+
+    if (!invoice && metadata_invoice_id) {
+      const { data: byMeta, error: metaErr } = await supabase
+        .from('invoices')
+        .select('id, docupipe_job_id, docupipe_id')
+        .eq('id', metadata_invoice_id)
+        .maybeSingle();
+
+      if (!metaErr && byMeta) {
+        invoice = {
+          id: byMeta.id,
+          docupipe_job_id: byMeta.docupipe_job_id,
+        };
+        const patch: Record<string, string | null> = {
+          docupipe_id: document_id,
+        };
+        if (job_id) patch.docupipe_job_id = job_id;
+        const { error: patchErr } = await supabase
+          .from('invoices')
+          .update(patch)
+          .eq('id', byMeta.id);
+        if (patchErr) {
+          console.error('Failed to backfill docupipe_id from webhook:', patchErr);
+        } else {
+          console.log('Backfilled docupipe_id from metadata.invoice_id match', {
+            invoice_id: byMeta.id,
+            document_id,
+          });
+        }
+      }
+    }
+
+    if (!invoice) {
+      console.error('Invoice not found for docupipe_id:', document_id, {
+        metadata_invoice_id,
+      });
       return NextResponse.json(
         { error: 'Fatura não encontrada' },
         { status: 404 }
@@ -182,9 +261,7 @@ export async function POST(request: NextRequest) {
     if (status !== 'completed') {
       console.error('Unsupported DocuPipe webhook status:', {
         status,
-        eventType:
-          (rawPayload as Record<string, unknown>).type ||
-          (rawPayload as Record<string, unknown>).event,
+        eventType: raw.eventType || raw.type || raw.event,
       });
       return NextResponse.json(
         { error: 'Status de webhook inválido' },
