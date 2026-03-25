@@ -44,6 +44,7 @@ export interface Invoice {
   status: InvoiceStatus;
   docupipe_id: string | null;
   docupipe_job_id: string | null;
+  docupipe_raw: unknown | null;
   file_path: string | null;
   file_name: string | null;
   uploaded_by: string | null;

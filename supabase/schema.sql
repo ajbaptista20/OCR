@@ -143,6 +143,7 @@ create table public.invoices (
   ),
   docupipe_id text,
   docupipe_job_id text,
+  docupipe_raw jsonb,
   file_path text,
   file_name text,
   uploaded_by uuid references auth.users(id),
@@ -200,6 +201,10 @@ $$ language plpgsql;
 create trigger invoices_updated_at
   before update on public.invoices
   for each row execute procedure public.update_updated_at();
+
+-- Backwards-compatible migrations for existing DBs
+alter table public.invoices
+  add column if not exists docupipe_raw jsonb;
 
 -- ============================================
 -- INVOICE LINE ITEMS

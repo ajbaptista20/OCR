@@ -291,6 +291,9 @@ export async function POST(request: NextRequest) {
       status: 'pending_review',
     };
 
+    // Persist complete DocuPipe payload for later troubleshooting/review
+    updateData.docupipe_raw = rawPayload as unknown;
+
     if (data.supplier_name) updateData.supplier_name = data.supplier_name;
     if (data.invoice_number) updateData.invoice_number = data.invoice_number;
     if (data.invoice_date) updateData.invoice_date = data.invoice_date;
